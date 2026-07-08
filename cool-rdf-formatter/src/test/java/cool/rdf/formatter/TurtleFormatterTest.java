@@ -796,12 +796,110 @@ public class TurtleFormatterTest {
    @ParameterizedTest
    @MethodSource
    void testConsistentBlankNodeOrdering( final String content ) {
-      final FormattingStyle style = FormattingStyle.DEFAULT;
+      final FormattingStyle style = preserveBlankNodeLabelsAndOrderingStyle();
       final TurtleFormatter formatter = new TurtleFormatter( style );
       for ( int i = 0; i < 1; i++ ) {
          final String result = formatter.applyToContent( content );
          assertThat( result.trim() ).isEqualTo( content.trim() );
       }
+   }
+
+   @Test
+   void testBlankNodeLabelsAndOrderingAreNotPreservedWhenDisabled() {
+      final String content = """
+         @prefix ex: <http://example.com/ns#> .
+
+         ex:aThing ex:has [
+             ex:value "z" ;
+           ] ;
+           ex:has [
+             ex:value "a" ;
+           ] .
+         """;
+      final String expected = """
+         @prefix ex: <http://example.com/ns#> .
+
+         ex:aThing ex:has [
+             ex:value "a" ;
+           ] ;
+           ex:has [
+             ex:value "z" ;
+           ] .
+         """;
+      final FormattingStyle style = FormattingStyle.builder()
+            .knownPrefixes( Set.of() )
+            .preserveBlankNodeLabelsAndOrdering( false )
+            .build();
+      assertThat( style.preserveBlankNodeLabelsAndOrdering() ).isFalse();
+      final TurtleFormatter formatter = new TurtleFormatter( style );
+
+      final String result = formatter.applyToContent( content );
+
+      assertThat( result.trim() ).isEqualTo( expected.trim() );
+   }
+
+   @Test
+   void testBlankNodeLabelsAndOrderingArePreservedByDefault() {
+      final String content = """
+         @prefix ex: <http://example.com/ns#> .
+
+         ex:aThing ex:has [
+             ex:value "z" ;
+           ] ;
+           ex:has [
+             ex:value "a" ;
+           ] .
+         """;
+      final FormattingStyle style = FormattingStyle.builder()
+            .knownPrefixes( Set.of() )
+            .build();
+      assertThat( style.preserveBlankNodeLabelsAndOrdering() ).isTrue();
+      final TurtleFormatter formatter = new TurtleFormatter( style );
+
+      final String result = formatter.applyToContent( content );
+
+      assertThat( result.trim() ).isEqualTo( content.trim() );
+   }
+
+   @Test
+   void testBlankNodeLabelsAreNotPreservedWhenDisabled() {
+      final String content = """
+         @prefix ex: <http://example.com/ns#> .
+
+         ex:left ex:has _:sourceLabel .
+         ex:right ex:has _:sourceLabel .
+         _:sourceLabel ex:value "a" .
+         """;
+      final FormattingStyle style = FormattingStyle.builder()
+            .knownPrefixes( Set.of() )
+            .preserveBlankNodeLabelsAndOrdering( false )
+            .build();
+      assertThat( style.preserveBlankNodeLabelsAndOrdering() ).isFalse();
+      final TurtleFormatter formatter = new TurtleFormatter( style );
+
+      final String result = formatter.applyToContent( content );
+
+      assertThat( result ).doesNotContain( "_:sourceLabel" );
+   }
+
+   @Test
+   void testBlankNodeLabelsCanBePreserved() {
+      final String content = """
+         @prefix ex: <http://example.com/ns#> .
+
+         ex:left ex:has _:sourceLabel .
+         ex:right ex:has _:sourceLabel .
+         _:sourceLabel ex:value "a" .
+         """;
+      final FormattingStyle style = FormattingStyle.builder()
+            .knownPrefixes( Set.of() )
+            .preserveBlankNodeLabelsAndOrdering( true )
+            .build();
+      final TurtleFormatter formatter = new TurtleFormatter( style );
+
+      final String result = formatter.applyToContent( content );
+
+      assertThat( result ).contains( "_:sourceLabel" );
    }
 
    static Stream<Arguments> testConsistentBlankNodeOrdering() {
@@ -883,7 +981,7 @@ public class TurtleFormatterTest {
          _:gen0 ex:has [
              ex:has _:gen0 ;
            ] .""";
-      final FormattingStyle style = FormattingStyle.DEFAULT;
+      final FormattingStyle style = preserveBlankNodeLabelsAndOrderingStyle();
       final TurtleFormatter formatter = new TurtleFormatter( style );
       for ( int i = 0; i < 20; i++ ) {
          final String result = formatter.applyToContent( content );
@@ -906,7 +1004,7 @@ public class TurtleFormatterTest {
          _:blank1 ex:has [
              ex:has _:blank1 ;
            ] .""";
-      final FormattingStyle style = FormattingStyle.DEFAULT;
+      final FormattingStyle style = preserveBlankNodeLabelsAndOrderingStyle();
       final TurtleFormatter formatter = new TurtleFormatter( style );
       for ( int i = 0; i < 20; i++ ) {
          final String result = formatter.applyToContent( content );
@@ -929,7 +1027,7 @@ public class TurtleFormatterTest {
          ex:A ex:has [
              ex:has ex:A ;
            ] .""";
-      final FormattingStyle style = FormattingStyle.DEFAULT;
+      final FormattingStyle style = preserveBlankNodeLabelsAndOrderingStyle();
       final TurtleFormatter formatter = new TurtleFormatter( style );
       for ( int i = 0; i < 20; i++ ) {
          final String result = formatter.applyToContent( content );
@@ -958,7 +1056,7 @@ public class TurtleFormatterTest {
                ] ;
              ] ;
            ] .""";
-      final FormattingStyle style = FormattingStyle.DEFAULT;
+      final FormattingStyle style = preserveBlankNodeLabelsAndOrderingStyle();
       final TurtleFormatter formatter = new TurtleFormatter( style );
       for ( int i = 0; i < 20; i++ ) {
          final String result = formatter.applyToContent( content );
@@ -984,7 +1082,7 @@ public class TurtleFormatterTest {
                ex:has ex:A ;
              ] ;
            ] .""";
-      final FormattingStyle style = FormattingStyle.DEFAULT;
+      final FormattingStyle style = preserveBlankNodeLabelsAndOrderingStyle();
       final TurtleFormatter formatter = new TurtleFormatter( style );
       final String result = formatter.applyToContent( content );
       assertThat( result.trim() ).isEqualTo( expected );
@@ -1011,7 +1109,7 @@ public class TurtleFormatterTest {
          ex:B ex:has [
              ex:has ex:A ;
            ] .""";
-      final FormattingStyle style = FormattingStyle.DEFAULT;
+      final FormattingStyle style = preserveBlankNodeLabelsAndOrderingStyle();
       final TurtleFormatter formatter = new TurtleFormatter( style );
       final String result = formatter.applyToContent( content );
       assertThat( result.trim() ).isEqualTo( expected );
@@ -1034,7 +1132,7 @@ public class TurtleFormatterTest {
            ] ;
            :foo _:b3 ;
          ] .""";
-      final FormattingStyle style = FormattingStyle.DEFAULT;
+      final FormattingStyle style = preserveBlankNodeLabelsAndOrderingStyle();
       final TurtleFormatter formatter = new TurtleFormatter( style );
       for ( int i = 0; i < 20; i++ ) {
          final String result = formatter.applyToContent( content );
@@ -1064,7 +1162,7 @@ public class TurtleFormatterTest {
            ] ;
            :foo _:b3 ;
          ] .""";
-      final FormattingStyle style = FormattingStyle.DEFAULT;
+      final FormattingStyle style = preserveBlankNodeLabelsAndOrderingStyle();
       final TurtleFormatter formatter = new TurtleFormatter( style );
       for ( int i = 0; i < 20; i++ ) {
          final String result = formatter.applyToContent( content );
@@ -1374,6 +1472,12 @@ public class TurtleFormatterTest {
       final TurtleFormatter formatter = new TurtleFormatter( style );
       final String result = formatter.applyToContent( content );
       assertThat( result.trim() ).isEqualTo( expected );
+   }
+
+   private FormattingStyle preserveBlankNodeLabelsAndOrderingStyle() {
+      return FormattingStyle.builder()
+            .preserveBlankNodeLabelsAndOrdering( true )
+            .build();
    }
 
    private Model inMemorySiblingBlankNodeModel( final boolean allocateSomethingElseFirst ) {

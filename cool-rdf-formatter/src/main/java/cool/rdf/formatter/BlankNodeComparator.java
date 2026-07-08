@@ -41,6 +41,7 @@ final class BlankNodeComparator implements Comparator<Resource> {
    private final Model model;
    private final PrefixMapping prefixMapping;
    private final BlankNodeMetadata blankNodeMetadata;
+   private final boolean preserveBlankNodeLabelsAndOrdering;
    private final Map<Resource, String[]> keys = new LinkedHashMap<>( CACHE_SIZE, 0.75f, true ) {
       @Override
       protected boolean removeEldestEntry( final Map.Entry<Resource, String[]> eldest ) {
@@ -49,10 +50,11 @@ final class BlankNodeComparator implements Comparator<Resource> {
    };
 
    BlankNodeComparator( final Model model, final PrefixMapping prefixMapping,
-         final BlankNodeMetadata blankNodeMetadata ) {
+         final BlankNodeMetadata blankNodeMetadata, final boolean preserveBlankNodeLabelsAndOrdering ) {
       this.model = model;
       this.prefixMapping = prefixMapping;
       this.blankNodeMetadata = blankNodeMetadata;
+      this.preserveBlankNodeLabelsAndOrdering = preserveBlankNodeLabelsAndOrdering;
    }
 
    @Override
@@ -60,11 +62,13 @@ final class BlankNodeComparator implements Comparator<Resource> {
       if ( left.equals( right ) ) {
          return 0;
       }
-      final Long leftOrder = blankNodeMetadata.getOrder( left.asNode() );
-      final Long rightOrder = blankNodeMetadata.getOrder( right.asNode() );
-      if ( leftOrder != null || rightOrder != null ) {
-         return Optional.ofNullable( leftOrder ).orElse( Long.MAX_VALUE )
-               .compareTo( Optional.ofNullable( rightOrder ).orElse( Long.MAX_VALUE ) );
+      if ( preserveBlankNodeLabelsAndOrdering ) {
+         final Long leftOrder = blankNodeMetadata.getOrder( left.asNode() );
+         final Long rightOrder = blankNodeMetadata.getOrder( right.asNode() );
+         if ( leftOrder != null || rightOrder != null ) {
+            return Optional.ofNullable( leftOrder ).orElse( Long.MAX_VALUE )
+                  .compareTo( Optional.ofNullable( rightOrder ).orElse( Long.MAX_VALUE ) );
+         }
       }
       for ( int depth = 1; depth <= MAX_DEPTH; depth++ ) {
          final int result = key( left, depth ).compareTo( key( right, depth ) );

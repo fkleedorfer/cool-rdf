@@ -59,6 +59,7 @@ import org.apache.jena.vocabulary.XSD;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import cool.rdf.core.model.RdfModel;
 import cool.rdf.core.model.RdfPrefix;
 import cool.rdf.formatter.blanknode.BlankNodeMetadata;
 import cool.rdf.formatter.blanknode.BlankNodeOrderAwareTurtleParser;
@@ -173,13 +174,21 @@ public class TurtleFormatter implements Function<Model, String>, BiConsumer<Mode
       if ( style.charset() == FormattingStyle.Charset.UTF_8_BOM ) {
          writeByteOrderMark( outputStream );
       }
-      final BlankNodeOrderAwareTurtleParser.ParseResult result = BlankNodeOrderAwareTurtleParser.parseModel( content );
-      final Model model = result.model();
-      final BlankNodeMetadata blankNodeMetadata = result.blankNodeMetadata();
+      if ( style.preserveBlankNodeLabelsAndOrdering() ) {
+         final BlankNodeOrderAwareTurtleParser.ParseResult result = BlankNodeOrderAwareTurtleParser.parseModel( content );
+         final Model model = result.model();
+         final BlankNodeMetadata blankNodeMetadata = result.blankNodeMetadata();
+         final PrefixMapping prefixMapping = buildPrefixMapping( model );
+         final RDFNodeComparatorFactory rdfNodeComparatorFactory = new RDFNodeComparatorFactory( prefixMapping,
+               blankNodeMetadata );
+         doFormat( model, prefixMapping, rdfNodeComparatorFactory, blankNodeMetadata, outputStream );
+         return;
+      }
+
+      final Model model = RdfModel.fromTurtle( content );
       final PrefixMapping prefixMapping = buildPrefixMapping( model );
-      final RDFNodeComparatorFactory rdfNodeComparatorFactory = new RDFNodeComparatorFactory( prefixMapping,
-            blankNodeMetadata );
-      doFormat( model, prefixMapping, rdfNodeComparatorFactory, blankNodeMetadata, outputStream );
+      final RDFNodeComparatorFactory rdfNodeComparatorFactory = new RDFNodeComparatorFactory( prefixMapping );
+      doFormat( model, prefixMapping, rdfNodeComparatorFactory, BlankNodeMetadata.gotNothing(), outputStream );
    }
 
    private void writeByteOrderMark( final OutputStream outputStream ) {
@@ -224,7 +233,8 @@ public class TurtleFormatter implements Function<Model, String>, BiConsumer<Mode
             .prefixMapping( prefixMapping )
             .rdfNodeComparatorFactory( rdfNodeComparatorFactory )
             .blankNodeMetadata( blankNodeMetadata )
-            .blankNodeComparator( new BlankNodeComparator( model, prefixMapping, blankNodeMetadata ) )
+            .blankNodeComparator( new BlankNodeComparator( model, prefixMapping, blankNodeMetadata,
+                  style.preserveBlankNodeLabelsAndOrdering() ) )
             .build();
       final State initialState = buildInitialState( context, outputStream );
       final State prefixesWritten = writePrefixes( initialState );
