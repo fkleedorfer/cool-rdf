@@ -340,7 +340,7 @@ public class CoolWrite extends AbstractCommand implements Runnable {
    }
 
    private BiFunction<Resource, Integer, String> buildAnonymousNodeIdGenerator( final String pattern ) {
-      return ( _, integer ) -> pattern.replace( "0", "" + integer );
+      return ( res, integer ) -> pattern.replace( "0", "" + integer );
    }
 
    private static class NumberFormatConverter implements CommandLine.ITypeConverter<NumberFormat> {
